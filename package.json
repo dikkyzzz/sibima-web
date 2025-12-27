@@ -9,6 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@adobe/react-spectrum": "^3.46.0",
+    "@spectrum-icons/illustrations": "^3.6.27",
+    "@spectrum-icons/workflow": "^4.2.26",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.89.0",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3"
