@@ -399,3 +399,39 @@ export async function getDocuments() {
     return data || [];
 }
 
+// ============================================
+// USER MANAGEMENT (ADMIN)
+// ============================================
+
+export async function upsertUser(user: Partial<User>) {
+    const { data, error } = await supabase
+        .from('users')
+        .upsert({
+            ...user,
+            updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error upserting user:', error);
+        throw error;
+    }
+
+    return data;
+}
+
+export async function deleteUser(id: string) {
+    const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error deleting user:', error);
+        throw error;
+    }
+
+    return true;
+}
+

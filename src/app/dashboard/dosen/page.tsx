@@ -10,7 +10,12 @@ import {
 } from '@adobe/react-spectrum';
 import Download from '@spectrum-icons/workflow/Download';
 import User from '@spectrum-icons/workflow/User';
-import { getDosenList } from '@/lib/api';
+import Add from '@spectrum-icons/workflow/Add';
+import Edit from '@spectrum-icons/workflow/Edit';
+import Delete from '@spectrum-icons/workflow/Delete';
+import { getDosenList, deleteUser } from '@/lib/api';
+import UserModal from '@/components/UserModal';
+import { User as UserType } from '@/lib/types';
 
 interface DosenWithBimbingan {
     id: string;
@@ -25,19 +30,46 @@ export default function DosenPage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
-    useEffect(() => {
-        async function fetchData() {
-            try {
-                const data = await getDosenList(searchQuery);
-                setDosenList(data);
-            } catch (error) {
-                console.error('Error fetching dosen:', error);
-            } finally {
-                setLoading(false);
-            }
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<Partial<UserType> | null>(null);
+
+    async function fetchData() {
+        setLoading(true);
+        try {
+            const data = await getDosenList(searchQuery);
+            setDosenList(data);
+        } catch (error) {
+            console.error('Error fetching dosen:', error);
+        } finally {
+            setLoading(false);
         }
+    }
+
+    useEffect(() => {
         fetchData();
     }, [searchQuery]);
+
+    const handleAdd = () => {
+        setSelectedUser(null);
+        setIsModalOpen(true);
+    };
+
+    const handleEdit = (user: DosenWithBimbingan) => {
+        setSelectedUser(user);
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if (confirm('Yakin ingin menghapus dosen ini?')) {
+            try {
+                await deleteUser(id);
+                fetchData();
+            } catch (error) {
+                alert('Gagal menghapus user');
+            }
+        }
+    };
 
     if (loading) {
         return (
@@ -57,10 +89,16 @@ export default function DosenPage() {
                         {dosenList.length} dosen terdaftar
                     </Text>
                 </div>
-                <ActionButton>
-                    <Download />
-                    <Text>Export</Text>
-                </ActionButton>
+                <Flex gap="size-150">
+                    <ActionButton onPress={handleAdd}>
+                        <Add />
+                        <Text>Tambah Dosen</Text>
+                    </ActionButton>
+                    <ActionButton>
+                        <Download />
+                        <Text>Export</Text>
+                    </ActionButton>
+                </Flex>
             </Flex>
 
             {/* Search */}
@@ -101,8 +139,18 @@ export default function DosenPage() {
                                     padding: '24px',
                                     cursor: 'pointer',
                                     transition: 'all 0.15s ease',
+                                    position: 'relative',
                                 }}
+                                onClick={() => handleEdit(dosen)}
                             >
+                                <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', gap: '4px' }}>
+                                    <ActionButton isQuiet onPress={() => handleEdit(dosen)}>
+                                        <Edit size="S" />
+                                    </ActionButton>
+                                    <ActionButton isQuiet onPress={(e) => handleDelete(e as any, dosen.id)}>
+                                        <Delete size="S" />
+                                    </ActionButton>
+                                </div>
                                 <Flex alignItems="center" gap="size-200" marginBottom="size-200">
                                     <div style={{
                                         width: '56px',
@@ -154,6 +202,14 @@ export default function DosenPage() {
                     })}
                 </div>
             )}
+
+            <UserModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSuccess={fetchData}
+                user={selectedUser}
+                defaultRole="dosen"
+            />
         </div>
     );
 }

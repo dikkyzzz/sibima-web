@@ -13,7 +13,11 @@ import {
 import Add from '@spectrum-icons/workflow/Add';
 import User from '@spectrum-icons/workflow/User';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
-import { getMahasiswaList } from '@/lib/api';
+import Edit from '@spectrum-icons/workflow/Edit';
+import Delete from '@spectrum-icons/workflow/Delete';
+import { getMahasiswaList, deleteUser } from '@/lib/api';
+import UserModal from '@/components/UserModal';
+import { User as UserType } from '@/lib/types';
 
 interface MahasiswaWithBimbingan {
     id: string;
@@ -35,19 +39,48 @@ export default function MahasiswaPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
 
-    useEffect(() => {
-        async function fetchData() {
-            try {
-                const data = await getMahasiswaList({ search: searchQuery });
-                setMahasiswaList(data);
-            } catch (error) {
-                console.error('Error fetching mahasiswa:', error);
-            } finally {
-                setLoading(false);
-            }
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<Partial<UserType> | null>(null);
+
+    async function fetchData() {
+        setLoading(true);
+        try {
+            const data = await getMahasiswaList({ search: searchQuery });
+            setMahasiswaList(data);
+        } catch (error) {
+            console.error('Error fetching mahasiswa:', error);
+        } finally {
+            setLoading(false);
         }
+    }
+
+    useEffect(() => {
         fetchData();
     }, [searchQuery]);
+
+    const handleAdd = () => {
+        setSelectedUser(null);
+        setIsModalOpen(true);
+    };
+
+    const handleEdit = (user: MahasiswaWithBimbingan) => {
+        setSelectedUser({
+            ...user,
+            angkatan: user.angkatan === null ? undefined : user.angkatan
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (id: string) => {
+        if (confirm('Yakin ingin menghapus mahasiswa ini?')) {
+            try {
+                await deleteUser(id);
+                fetchData();
+            } catch (error) {
+                alert('Gagal menghapus user');
+            }
+        }
+    };
 
     const getStatus = (bimbingan: MahasiswaWithBimbingan['bimbingan']) => {
         if (!bimbingan || bimbingan.length === 0) return 'unassigned';
@@ -91,7 +124,7 @@ export default function MahasiswaPage() {
                         {mahasiswaList.length} mahasiswa terdaftar
                     </Text>
                 </div>
-                <ActionButton>
+                <ActionButton onPress={handleAdd}>
                     <Add />
                     <Text>Tambah Mahasiswa</Text>
                 </ActionButton>
@@ -200,7 +233,14 @@ export default function MahasiswaPage() {
                                             </span>
                                         </td>
                                         <td style={{ padding: '16px' }}>
-                                            <ChevronRight size="S" UNSAFE_style={{ color: '#999' }} />
+                                            <Flex gap="size-100">
+                                                <ActionButton isQuiet onPress={() => handleEdit(mhs)}>
+                                                    <Edit size="S" />
+                                                </ActionButton>
+                                                <ActionButton isQuiet onPress={() => handleDelete(mhs.id)}>
+                                                    <Delete size="S" />
+                                                </ActionButton>
+                                            </Flex>
                                         </td>
                                     </tr>
                                 );
@@ -209,6 +249,14 @@ export default function MahasiswaPage() {
                     </table>
                 )}
             </div>
+
+            <UserModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSuccess={fetchData}
+                user={selectedUser}
+                defaultRole="mahasiswa"
+            />
         </div>
     );
 }
